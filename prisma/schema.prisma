@@ -1,0 +1,198 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  }
+
+  datasource db {
+    provider = "postgresql"
+      url      = env("DATABASE_URL")
+      }
+
+      // User model for designers
+      model User {
+        id            String    @id @default(cuid())
+          email         String    @unique
+            emailVerified DateTime?
+              name          String?
+                image         String?
+                  role          String    @default("designer") // designer, admin
+                    createdAt     DateTime  @default(now())
+                      updatedAt     DateTime  @updatedAt
+
+                        // Relations
+                          clients               Client[]
+                            questionnaireResponses QuestionnaireResponse[]
+                              scopeDocuments       ScopeDocument[]
+                                invoices             Invoice[]
+
+                                  @@index([email])
+                                  }
+
+                                  // Client model
+                                  model Client {
+                                    id            String    @id @default(cuid())
+                                      userId        String
+                                        user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+                                            name          String
+                                              email         String
+                                                phone         String?
+                                                  company       String?
+                                                    projectTitle  String?
+                                                      status        String    @default("active") // active, completed, archived
+
+                                                          createdAt     DateTime  @default(now())
+                                                            updatedAt     DateTime  @updatedAt
+
+                                                              // Relations
+                                                                questionnaireResponses QuestionnaireResponse[]
+                                                                  assets                 Asset[]
+                                                                    scopeDocuments        ScopeDocument[]
+                                                                      invoices              Invoice[]
+
+                                                                        @@unique([userId, email])
+                                                                          @@index([userId])
+                                                                          }
+
+                                                                          // Questionnaire Templates
+                                                                          model QuestionnaireTemplate {
+                                                                            id            String    @id @default(cuid())
+                                                                              name          String
+                                                                                description   String?
+                                                                                  questions     Question[]
+
+                                                                                      createdAt     DateTime  @default(now())
+                                                                                        updatedAt     DateTime  @updatedAt
+                                                                                        }
+
+                                                                                        // Questions in templates
+                                                                                        model Question {
+                                                                                          id                      String    @id @default(cuid())
+                                                                                            templateId              String
+                                                                                              template                QuestionnaireTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+                                                                                                  title                   String
+                                                                                                    description             String?
+                                                                                                      type                    String    // text, textarea, select, multiselect, file, date, number
+                                                                                                        required                Boolean   @default(true)
+                                                                                                          options                 String?   // JSON for select/multiselect options
+                                                                                                            order                   Int
+                                                                                                              
+                                                                                                                responses               QuestionResponse[]
+                                                                                                                  
+                                                                                                                    @@index([templateId])
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    // Responses to questionnaires
+                                                                                                                    model QuestionnaireResponse {
+                                                                                                                      id            String    @id @default(cuid())
+                                                                                                                        clientId      String
+                                                                                                                          client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+                                                                                                                            userId        String
+                                                                                                                              user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+                                                                                                                                
+                                                                                                                                  title         String
+                                                                                                                                    status        String    @default("draft") // draft, submitted, reviewed
+                                                                                                                                      completedAt   DateTime?
+                                                                                                                                        
+                                                                                                                                          responses     QuestionResponse[]
+                                                                                                                                            scopeDocuments ScopeDocument[]
+                                                                                                                                              
+                                                                                                                                                createdAt     DateTime  @default(now())
+                                                                                                                                                  updatedAt     DateTime  @updatedAt
+                                                                                                                                                  
+                                                                                                                                                    @@index([clientId])
+                                                                                                                                                      @@index([userId])
+                                                                                                                                                      }
+                                                                                                                                                      
+                                                                                                                                                      // Individual question responses
+                                                                                                                                                      model QuestionResponse {
+                                                                                                                                                        id            String    @id @default(cuid())
+                                                                                                                                                          questionnaireResponseId String
+                                                                                                                                                            questionnaireResponse   QuestionnaireResponse @relation(fields: [questionnaireResponseId], references: [id], onDelete: Cascade)
+                                                                                                                                                              questionId    String
+                                                                                                                                                                question      Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+                                                                                                                                                                  
+                                                                                                                                                                    answer        String    // JSON for complex answers
+                                                                                                                                                                      
+                                                                                                                                                                        @@index([questionnaireResponseId])
+                                                                                                                                                                          @@index([questionId])
+                                                                                                                                                                          }
+                                                                                                                                                                          
+                                                                                                                                                                          // Assets uploaded by clients
+                                                                                                                                                                          model Asset {
+                                                                                                                                                                            id            String    @id @default(cuid())
+                                                                                                                                                                              clientId      String
+                                                                                                                                                                                client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+                                                                                                                                                                                  
+                                                                                                                                                                                    name          String
+                                                                                                                                                                                      fileUrl       String
+                                                                                                                                                                                        fileType      String
+                                                                                                                                                                                          fileSize      Int
+                                                                                                                                                                                            
+                                                                                                                                                                                              createdAt     DateTime  @default(now())
+                                                                                                                                                                                                updatedAt     DateTime  @updatedAt
+                                                                                                                                                                                                
+                                                                                                                                                                                                  @@index([clientId])
+                                                                                                                                                                                                  }
+                                                                                                                                                                                                  
+                                                                                                                                                                                                  // Scope Documents
+                                                                                                                                                                                                  model ScopeDocument {
+                                                                                                                                                                                                    id            String    @id @default(cuid())
+                                                                                                                                                                                                      userId        String
+                                                                                                                                                                                                        user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+                                                                                                                                                                                                          clientId      String
+                                                                                                                                                                                                            client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+                                                                                                                                                                                                              questionnaireResponseId String?
+                                                                                                                                                                                                                questionnaireResponse   QuestionnaireResponse? @relation(fields: [questionnaireResponseId], references: [id])
+                                                                                                                                                                                                                  
+                                                                                                                                                                                                                    title         String
+                                                                                                                                                                                                                      content       String    // HTML content
+                                                                                                                                                                                                                        status        String    @default("draft") // draft, sent, signed
+                                                                                                                                                                                                                          
+                                                                                                                                                                                                                            createdAt     DateTime  @default(now())
+                                                                                                                                                                                                                              updatedAt     DateTime  @updatedAt
+                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                @@index([userId])
+                                                                                                                                                                                                                                  @@index([clientId])
+                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                  // Invoices
+                                                                                                                                                                                                                                  model Invoice {
+                                                                                                                                                                                                                                    id            String    @id @default(cuid())
+                                                                                                                                                                                                                                      userId        String
+                                                                                                                                                                                                                                        user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+                                                                                                                                                                                                                                          clientId      String
+                                                                                                                                                                                                                                            client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                invoiceNumber String    @unique
+                                                                                                                                                                                                                                                  amount        Float
+                                                                                                                                                                                                                                                    currency      String    @default("USD")
+                                                                                                                                                                                                                                                      status        String    @default("draft") // draft, sent, paid, overdue
+                                                                                                                                                                                                                                                        dueDate       DateTime
+                                                                                                                                                                                                                                                          paidAt        DateTime?
+                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                              stripePaymentId String?
+                                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                  createdAt     DateTime  @default(now())
+                                                                                                                                                                                                                                                                    updatedAt     DateTime  @updatedAt
+                                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                      @@unique([userId, invoiceNumber])
+                                                                                                                                                                                                                                                                        @@index([userId])
+                                                                                                                                                                                                                                                                          @@index([clientId])
+                                                                                                                                                                                                                                                                          }
+                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                          // Email logs
+                                                                                                                                                                                                                                                                          model EmailLog {
+                                                                                                                                                                                                                                                                            id            String    @id @default(cuid())
+                                                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                recipientEmail String
+                                                                                                                                                                                                                                                                                  subject       String
+                                                                                                                                                                                                                                                                                    templateType  String    // welcome, questionnaire, scope, invoice, payment
+                                                                                                                                                                                                                                                                                      status        String    @default("sent") // sent, failed, bounced
+                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                          createdAt     DateTime  @default(now())
+                                                                                                                                                                                                                                                                                          }
+                                                                                                                                                                                                                                                                                          
